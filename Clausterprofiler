@@ -1,0 +1,161 @@
+Clausterprofiler (enriquencimento funcional)
+
+#https://rdrr.io/bioc/clusterProfiler/man/compareCluster.html
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(clusterProfiler)
+library(org.Hs.eg.db)
+library(viridis)
+library(circlize) # >= 0.4.10
+library(ComplexHeatmap)
+#
+duplicated(data$entrezgene_id)
+data = data[!duplicated(data$entrezgene_id),]
+
+data$group =ifelse(data$log2FoldChange > 0, 'Up', 'Down')
+data$comp = 'ATL smoldering vs control'
+
+#somente para estudos com time point
+df_final = rbind(DN_vs_DP, DN_vs_Blue, DN_vs_Red)
+head(df_final)
+
+##enrichGO                    # scale_color_gradient(colours = c("darkblue", "gray", "darkred"))
+####ALL###
+
+results_enrichGO_ALL = compareCluster(entrezgene_id~group + comp, data = data, fun = "enrichGO",
+                                  pvalueCutoff = 0.05,
+                                  OrgDb = "org.Hs.eg.db",
+                                  ont = "ALL")
+
+p = dotplot(results_enrichGO_ALL, showCategory = 10, color = "p.adjust") +
+  scale_y_discrete(guide = guide_axis(check.overlap = F)) +
+  theme(axis.text.y = element_text(vjust = 1, debug = F, size = 10), 
+        axis.text.x = element_text(vjust = 1, size = 10),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 12),
+        panel.background = element_blank()) +
+  facet_wrap(~comp, scales = "free_x") + scale_color_viridis()+
+  scale_x_discrete(labels=c("down", "up"))
+
+png(filename = "ATL smoldering vs all.png", 
+    width = 20, height = 20, units = "cm", res = 300)
+p
+dev.off()
+
+##enrichGO                    # scale_color_gradient(colours = c("darkblue", "gray", "darkred"))
+####MF###
+results_enrichGO_MF = compareCluster(entrezgene_id~group + comp, data = df_final, fun = "enrichGO",
+                                      pvalueCutoff = 0.05,
+                                      OrgDb = "org.Hs.eg.db",
+                                      ont = "MF")
+
+f = dotplot(results_enrichGO_MF, showCategory = 10, color = "p.adjust") +
+  scale_y_discrete(guide = guide_axis(check.overlap = F)) +
+  theme(axis.text.y = element_text(vjust = 1, debug = F, size = 10), 
+        axis.text.x = element_text(vjust = 1, size = 10),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 12),
+        panel.background = element_blank()) +
+  facet_wrap(~comp, scales = "free_x") + scale_color_viridis()+
+  scale_x_discrete(labels=c("down", "up"))
+
+png(filename = "DN vs all Molecular function.png", 
+    width = 40, height = 20, units = "cm", res = 300)
+f
+dev.off()
+##enrichGO                    # scale_color_gradient(colours = c("darkblue", "gray", "darkred"))
+####CC###
+results_enrichGO_CC = compareCluster(entrezgene_id~group + comp, data = df_final, fun = "enrichGO",
+                                      pvalueCutoff = 0.05,
+                                      OrgDb = "org.Hs.eg.db",
+                                      ont = "CC")
+
+d = dotplot(results_enrichGO_CC, showCategory = 10, color = "p.adjust") +
+  scale_y_discrete(guide = guide_axis(check.overlap = F)) +
+  theme(axis.text.y = element_text(vjust = 1, debug = F, size = 10), 
+        axis.text.x = element_text(vjust = 1, size = 10),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 12),
+        panel.background = element_blank()) +
+  facet_wrap(~comp, scales = "free_x") + scale_x_discrete(labels=c("down", "up"))
+
+png(filename = "DN vs all celular component.png", 
+    width = 20, height = 20, units = "cm", res = 300)
+d
+dev.off()
+
+##groupGO                  
+results_enrichGO_ALL = compareCluster(entrezgene_id~group + comp, data = data, fun = "enrichGO",
+                                      pvalueCutoff = 0.05,
+                                      OrgDb = "org.Hs.eg.db",
+                                      ont = "BP")
+
+p = dotplot(results_enrichGO_ALL, showCategory = 10, color = "p.adjust") +
+  scale_y_discrete(guide = guide_axis(check.overlap = F)) +
+  theme(axis.text.y = element_text(vjust = 1, debug = F, size = 10), 
+        axis.text.x = element_text(vjust = 1, size = 10),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 12),
+        panel.background = element_blank()) +
+  facet_wrap(~comp, scales = "free_x") + scale_color_viridis()+
+  scale_x_discrete(labels=c("down", "up"))
+
+png(filename = "ATL smoldering vs all.png", 
+    width = 20, height = 20, units = "cm", res = 300)
+p
+dev.off()
+##enrichKEGG
+results_enrichKEGG = compareCluster(entrezgene_id~group + comp, data = df_final, fun = "enrichKEGG", organism="hsa", pvalueCutoff=0.05)
+                        
+ 
+dotplot(results_enrichKEGG, showCategory = 10, color = "p.adjust") +
+  scale_y_discrete(guide = guide_axis(check.overlap = F)) +
+  theme(axis.text.y = element_text(vjust = 1, debug = F, size = 10), 
+        axis.text.x = element_text(vjust = 1, size = 10),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 12),
+        panel.background = element_blank()) +
+  facet_wrap(~comp, scales = "free_x") + scale_color_viridis()
+##enrichDO
+results_enrichDO = compareCluster(entrezgene_id~group + comp, data = df_final, fun = "enrichDO",
+                         pvalueCutoff = 0.05)
+                         
+                         
+
+dotplot(results_enrichDO, showCategory = 10, color = "p.adjust") +
+  scale_y_discrete(guide = guide_axis(check.overlap = F)) +
+  theme(axis.text.y = element_text(vjust = 1, debug = F, size = 10), 
+        axis.text.x = element_text(vjust = 1, size = 10),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 12),
+        panel.background = element_blank()) +
+  facet_wrap(~comp, scales = "free_x") + scale_color_viridis()
+
+##enrichPathway
+results_enrichPathway = compareCluster(entrezgene_id~group + comp, data = df_final, fun = "enrichPathway",
+                         pvalueCutoff = 0.05)
+
+dotplot(results_enrichPathway, showCategory = 10, color = "p.adjust") +
+  scale_y_discrete(guide = guide_axis(check.overlap = F)) +
+  theme(axis.text.y = element_text(vjust = 1, debug = F, size = 10), 
+        axis.text.x = element_text(vjust = 1, size = 10),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 12),
+        panel.background = element_blank()) +
+  facet_wrap(~comp, scales = "free_x") + scale_color_viridis()
+
+
+#Export tables
+
+install.packages("writexl")
+library(writexl)
+
+results_enrichGO_ALL <- setReadable(results_enrichGO_ALL, 'org.Hs.eg.db', 'ENTREZID')
+tabelaALL <- results_enrichGO_ALL@compareClusterResult
+write_xlsx(tabelaALL, "C:/Users/shahab/Desktop/results_enrichGO_ALL.xlsx")
+
+
+results_enrichGO_BP <- setReadable(results_enrichGO_BP, 'org.Hs.eg.db', 'ENTREZID')
+tabelaBP <- results_enrichGO_BPf5@compareClusterResult
+openxlsx::write.xlsx(tabelaBP, "results_enrichGO_BP.xlsx")
