@@ -1,0 +1,85 @@
+# Transformação dos identificadores e ajuste nas tabelas 
+
+#By Yuri - 06.07.2023
+
+outDir <- "atl career"
+dir.create(outDir) #optional
+
+##### checagem e remoção de duplicatas-------
+duplicated(data$GENE_SYMBOL)
+datawf = data[!duplicated(data$GENE_SYMBOL),] #remover duplicatas 
+########filtragem e seleção dos dados------- 
+sig = datawf[datawf$P.Value < 0.05,]
+up = subset(sig,logFC > 1) 
+down = subset(sig,logFC < -1) 
+#####seleçao dos up e down-------
+library(openxlsx)
+openxlsx::write.xlsx(as.data.frame(datawf) , file.path(outDir, "significant_ATL_career.xlsx"), rowNames = T)
+openxlsx::write.xlsx(as.data.frame(up) , file.path(outDir, "significant_ATL_career.xlsx"), rowNames = T)
+openxlsx::write.xlsx(as.data.frame(down) , file.path(outDir, "significant_ATL_career.xlsx"), rowNames = T)
+
+write.xlsx(datawf, "all genes sem duplicatas.xlsx")
+write.xlsx(up, "up_notconverted ATL smoldering.xlsx")
+write.xlsx(down, "down_notconverted smoldering.xlsx")
+
+library(EnsDb.Hsapiens.v86)
+library(DESeq2)
+library(biomaRt)
+ 
+
+mart <- useMart(biomart = "ensembl", dataset = "hsapiens_gene_ensembl")
+
+transcript_ids <- up$GENE
+
+View(listAttributes(mart)) #caso seja necessário
+
+resup <- getBM(attributes = c('external_gene_name',
+                            'entrezgene_id'),
+             filters = "entrezgene_id", 
+             values = transcript_ids,
+             mart = mart)
+
+transcript_ids <- down$GENE
+
+resdown <- getBM(attributes = c('external_gene_name','entrezgene_id'),
+                                       filters = 'entrezgene_id',
+                                       values = transcript_ids,
+                                       mart = mart)
+
+library(openxlsx)
+openxlsx::write.xlsx(as.data.frame(resup) , file.path(outDir, "significant_ATL_career.xlsx"), rowNames = T)
+openxlsx::write.xlsx(as.data.frame(resdown) , file.path(outDir, "significant_ATL_career.xlsx"), rowNames = T)
+write.xlsx(resup,"up_converted smoldering.xlsx")
+write.xlsx(resdown,"down_converted smoldering.xlsx")
+
+remove("data","datawf","down","resdown","resup","sig","up", "transcript_ids")
+
+  
+######## merge the two tables based on the "id" column -----------
+merged_table <- merge( covariate_result,meta_sig_genes_metap, by = "external_gene_name")
+
+
+duplicated(merged_table$GENE_SYMBOL) #checagem 
+merged_tableGSE23 = merged_tableGSE23[!duplicated(merged_tableGSE23$SYMBOL),] #remover duplicatas
+
+# print the merged table
+library(openxlsx) 
+write.xlsx(merged_table, "metaDegs indolent ATL.xlsx")
+
+####### Carregar o pacote dplyr -------
+library(dplyr)
+# Unir as tabelas
+resultado <- table1 %>%
+  left_join(table2, by = "SYMBOL") %>%
+  left_join(table3, by = "SYMBOL") %>%
+  left_join(table4, by = "SYMBOL")
+
+write.xlsx(resultado, "merged all degs.xlsx")
+
+# Substituindo as vírgulas por pontos
+tabela <- data.frame(
+  Coluna1 = gsub(",", ".", tabela$Coluna1),
+  Coluna2 = gsub(",", ".", tabela$Coluna2))
+
+# Exibindo a tabela modificada
+print(tabela)
