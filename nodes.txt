@@ -1,0 +1,36 @@
+Nodes	Values
+vascular process in circulatory system	0
+GPCR signaling pathway, coupled to cyclic nucleotide second messenger	1
+regulation of blood pressure	2
+adenylate cyclase-modulating GPCR signaling pathway	3
+smooth muscle contraction	4
+muscle system process	5
+G protein-coupled acetylcholine receptor signaling pathway	6
+G protein-coupled serotonin receptor signaling pathway	7
+NS process involved in regulation of systemic arterial blood pressure	8
+angiotensin-activated signaling pathway	9
+calcium-mediated signaling	10
+regulation of membrane potential	11
+positive regulation of cytosolic calcium ion concentration	12
+cell chemotaxis	13
+regulation of angiogenesis	14
+AGTR1	15
+AGTR2	16
+EDNRA	17
+EDNRB	18
+MAS1	19
+ACE2	20
+BDKRB1	21
+F2R	22
+STAB1	23
+CXCR3	24
+ADRA1A	25
+ADRA2A	26
+ADRB1	27
+ADRB2	28
+CHRM1	29
+CHRM2	30
+CHRM3	31
+CHRM4	32
+CHRM5	33
+CHRNA1	34
