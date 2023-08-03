@@ -1,0 +1,94 @@
+install.packages("devtools")
+devtools::install_github("yanlinlin82/ggvenn")
+library(ggvenn)
+results = list(ATL_acute = na.omit(significant_ATL_acute$external_gene_name),
+               ATL_carrier = na.omit(significant_ATL_career$external_gene_name),
+               ATL_chronic = na.omit(significant_ATL_chronic$external_gene_name),
+               ATL_lymphoma = na.omit(significant_ATL_lymphoma$external_gene_name),
+               ATL_smoldering = na.omit(significant_ATL_smoldering$external_gene_name))
+View(results)
+
+p = ggvenn(results, fill_color = c("blue", "yellow", "gray", "red","green"),
+       stroke_size = 0.5, set_name_size = 4)
+
+png(filename = "Draw venn ATL.png", 
+    width = 40, height = 20, units = "cm", res = 300)
+p
+dev.off()
+
+#upset plot 
+install.packages("UpSetR")
+library(UpSetR)
+
+# Criar a lista de tabelas
+results = list("ATL acute" = na.omit(significant_ATL_acute$external_gene_name_acute), 
+               "ATL carrier" = na.omit(significant_ATL_career$external_gene_name_carrier),
+               "ATL chronic" = na.omit(significant_ATL_chronic$external_gene_name_chronic),
+               "ATL lymphoma" = na.omit(significant_ATL_lymphoma$external_gene_name_lymphoma),
+               "ATL smoldering" = na.omit(significant_ATL_smoldering$external_gene_name_smoldering))
+View(results)
+
+p = upset_plot <- upset(fromList(results), 
+                    order.by = "freq", 
+                    sets.bar.color = "#4682B4",
+                    main.bar.color = "#A9A9A9",
+                    matrix.color = "#FFD700",
+                    text.scale = 1.0,
+                    nsets = 27)
+
+png(filename = "upset plot ATL.png", 
+    width = 40, height = 20, units = "cm", res = 300)
+p
+dev.off()
+
+#ajuste de tabelas 
+duplicated(data$entrezgene_id)
+data = data[!duplicated(data$entrezgene_id),]
+data$group =ifelse(data$log2FoldChange > 0, 'Up', 'Down')
+# Crianod uma coluna de up = 1 e down = 0 
+smoldering_circos$circos =ifelse(smoldering_circos$`log2FoldChange smoldering` > 0, '1', '0')
+library(openxlsx)
+write.xlsx(lymphoma_circos, "smoldering_circos.xlsx")
+
+# Visualizar o resultado
+print(df)
+
+# Instale o pacote 'riverplot' se ainda não estiver instalado
+# install.packages("riverplot")
+
+# Carregue as bibliotecas necessárias
+library(riverplot)
+
+# Crie uma matriz com os genes em comum entre os estudos
+genes_estudo1 <- c(significant_ATL_acute$external_gene_name_acute)
+genes_estudo2 <- c(significant_ATL_career$external_gene_name_carrier)
+genes_estudo3 <- c(significant_ATL_chronic$external_gene_name_chronic)
+genes_estudo4 <- c(significant_ATL_lymphoma$external_gene_name_lymphoma)
+genes_estudo5 <- c(significant_ATL_smoldering$external_gene_name_smoldering)
+
+#barplot 
+getwd()
+down = read.csv("down.csv", header = T, sep = ";")
+up = read.csv("up.csv", header = T, sep = ";")
+
+#criar colunas 
+down$expression = "down"
+up$expression = "up"
+dge = rbind(down, up)
+#ou 
+dge$comp = ifelse(dge$log2FoldChange<0,"down", "up")
+
+table(dge$expression)
+df = data.frame(t(table(dge$expression)))
+library(ggplot2)
+ggplot(merge, aes(x = studies, y = Freq, fill = Var2)) + 
+  geom_bar(stat = "identity", position = position_dodge()) + 
+  scale_fill_manual(values = c("red", "blue")) +
+  geom_text(aes(label = Freq), vjust = 1.6, color = "white", position = position_dodge(0.9), size = 3.5) +
+  theme(
+    #panel.background = element_blank(),
+    axis.text.x = element_text(size = 12, angle = 30, face = "bold")
+  )
+str(df)
+
+?geom_bar
