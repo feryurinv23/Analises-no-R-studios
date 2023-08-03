@@ -1,0 +1,38 @@
+Diagrama de sankey 
+# Loadpackage
+library(networkD3)
+
+
+# Load energy projection data
+
+nodes = read.delim("nodes.txt", header = T, sep = "\t")
+nodes <- data.frame(name = c(nodes$Nodes))
+links = read.delim("links.txt", header = T, sep = "\t")
+
+#if we use factors it works!!!!!!!!!! Factorize nodes$name and you shall use only the factors to attribute colors (3 in my case)
+nodes$group <- as.factor(c(rep("a", 15), rep("b", 10), rep("c", 10)))
+ColourScale <- 'd3.scaleOrdinal() .domain(["a", "b", "c"]) .range(["#fafa84", "#02e875", "#61a1fa"])'
+
+#complete Source, Target, Values, NodeID and NodeGroup with the column names of your dataframes
+sn <- sankeyNetwork(Links = links, Nodes = nodes, Source = "Soucer",
+              Target = "Target", Value = "Values", NodeID = "name",
+              fontSize = 22, nodeWidth = 20, height = 1000, width = 800, units = "px",
+              colourScale = JS(ColourScale), NodeGroup = "group")
+
+dslp <- onRender(sn,
+         '
+  function(el) {
+    d3.selectAll(".node text").style("text-shadow", "0 1px white, 1px 0 white, -1px 0 white, 0 -1px white, 1px 1px white, -1px -1px white, 1px -1px white, -1px 1px white")
+  }
+  '
+)
+
+# save the widget
+library(htmlwidgets)
+saveWidget(dslp, file=paste0(getwd(), "/test.html"))
+
+#save as pdf
+require(webshot) 
+#webshot::install_phantomjs()
+#doesnt work very well actually, but if it is not for publication, ok then
+webshot(paste0(getwd(), "/sankeyEnergy_shadow.html"), "sankeyEnergy.pdf")
