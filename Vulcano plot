@@ -1,0 +1,65 @@
+Vulcano plot 
+
+keyvals <- ifelse(
+  metaDegs_indolent_ATL$logFC < 0 & metaDegs_indolent_ATL$CombinedPval   < 0.05, 'royalblue',
+  ifelse(metaDegs_indolent_ATL$logFC > 0 & metaDegs_indolent_ATL$CombinedPval < 0.05, 'red',
+         'black'))
+
+keyvals[is.na(keyvals)] <- 'black'
+names(keyvals)[keyvals == 'red'] <- 'Up-regulated'
+names(keyvals)[keyvals == 'black'] <- 'NonDEGs'
+names(keyvals)[keyvals == 'royalblue'] <- 'Down-regulated'
+
+table(keyvals)
+
+#proporções da minha imagem com base nos genes up e down regulados 
+xmin <- sort(na.exclude(metaDegs_indolent_ATL$logFC))[1]-0.5
+h <- 1+(-log10(min(na.omit(metaDegs_indolent_ATL$CombinedPval))))
+xmax <- sort((na.omit(metaDegs_indolent_ATL$logFC)),decreasing = T)[2]+0.5
+
+#selecionando os genes que estão mais diferencialmente expressos
+degs <- which(names(keyvals) %in% c('Up-regulated', 'Down-regulated'))
+topdegs <- c(head(order(metaDegs_indolent_ATL$logFC[degs]), n=10), 
+             head(order(metaDegs_indolent_ATL$logFC[degs], decreasing = T), n=10),
+             head(order(metaDegs_indolent_ATL$CombinedPval[degs]), n=10))
+rownames(metaDegs_indolent_ATL)[degs][topdegs]
+
+BiocManager::install("EnhancedVolcano")
+library(EnhancedVolcano)
+
+p = EnhancedVolcano(metaDegs_indolent_ATL,
+                lab = metaDegs_indolent_ATL$external_gene_name,
+                x = "logFC",
+                y = "CombinedPval",
+                pCutoff = 0.05,
+                FCcutoff = 0,
+                xlim = c(xmin, xmax),
+                ylim = c(-0.05, h),
+                xlab = bquote(~logFC ~ "fold change"),
+                ylab = bquote(-log10() ~ italic(p)*"P.Value"),
+                pointSize = 1,
+                selectLab = metaDegs_indolent_ATL$external_gene_name[degs][topdegs],
+                labSize = 3,
+                cutoffLineType = 'twodash',
+                title = "ATL indolent metadegs",
+                subtitle = "ATL indelent metadegs",
+                legendPosition = "right",
+                legendLabSize = 9,
+                colAlpha = 0.9,
+                labCol = 'black',
+                border = 'full',
+                borderColour = 'black',
+                borderWidth = 1,
+                drawConnectors = FALSE,
+                cutoffLineCol = 'black',
+                cutoffLineWidth = 0.4,
+                colCustom= keyvals,
+                gridlines.major = FALSE,
+                gridlines.minor = FALSE,
+)+
+  ggplot2::annotate("label", x =c(xmin+2,0,xmax-2), y = h-0.5 , label = table(keyvals)[c(3,1,2)], col=c("royalblue", "black", "red"))
+
+png(filename = "ATL indolent metadegs.png", 
+    width = 35, height = 20, units = "cm", res = 300)
+p
+dev.off()
