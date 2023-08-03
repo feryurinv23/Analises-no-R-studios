@@ -1,0 +1,111 @@
+#R script para análise de expressão diferencial por Limma
+# Referencia: https://sbc.shef.ac.uk/geo_tutorial/tutorial.nb.html
+# Instalar pacotes-----
+install.packages("BiocManager")
+install.packages("forcats")
+install.packages("stringr")
+install.packages("ggplot2")
+install.packages("ggrepel")
+install.packages("readr")
+install.packages("tidyr")
+install.packages("survminer")
+BiocManager::install("GEOquery", force = T)
+BiocManager::install("limma")
+BiocManager::install("pheatmap")
+BiocManager::install("org.Hs.eg.db")
+install.packages("xml2")
+#Buscar dataset direto do GEO----
+library(GEOquery)
+# com essa função voce consegue importar todos os dados disponibilizados pelo estudo. Dentre eles as anotaçoes e metadados de IDs
+my_id = "GSE233437"
+gse = getGEO(my_id)
+##quantas plataformas de sequenciamento foram usadas----
+# Alguns conjuntos de dados no GEO podem ser derivados de diferentes plataformas de microarray
+# aqui voce pode ver quantas plataformas de sequenciamento foram usadas e selecionar uma
+length(gse) 
+gse = gse[[1]]
+gse
+pData(gse) ## informação da amostra
+fData(gse) ## anotação do gene
+exprs(gse) ## dados de expressão
+
+#Verificar normalização
+#aqui sao informaçoes descritivas sobre os dados de expressao de cada sample
+#nesse caso verificar a distribuiçao dos dados (ebayes)
+boxplot(exprs(gse))
+exprs(gse) = log2(exprs(gse)) #transformação dos dados usando log2
+boxplot(exprs(gse),outline=FALSE)
+exprs(gse)[is.na(exprs(gse))] = 0
+
+#Usando as informaçoes de metadados
+library(dplyr)
+sampleInfo = pData(gse)
+View(sampleInfo)
+colnames(sampleInfo)
+sampleInfo = select(sampleInfo, "source_name_ch1")
+## renomear nome da coluna
+sampleInfo = rename(sampleInfo,group = 'source_name_ch1')
+head(sampleInfo)
+library(openxlsx)
+write.xlsx(sampleInfo, "metadado.xlsx")
+#analise do comportamento das amostras-----
+#Aqui a gente faz uma matriz de correlação dos dados de expressao entre as amostras
+library(pheatmap)
+corMatrix = cor(exprs(gse), method = 'spearman')
+pheatmap(corMatrix)  
+rownames(sampleInfo) 
+colnames(corMatrix)
+rownames(sampleInfo) = colnames(corMatrix)
+pheatmap(corMatrix,annotation_col=sampleInfo) 
+
+#####componentes principais----
+library(ggplot2)
+library(ggrepel)
+pca = prcomp(t(is.infinite(exprs(gse))))
+pca = prcomp(t(exprs(gse))) 
+?prcomp.formula
+?is.infinite
+  
+cbind(sampleInfo, pca$x) %>% 
+  ggplot(aes(x = PC1, y=PC2, col=group,label=paste("age", age))) + geom_point() + geom_text_repel()
+
+#Exportar os dados ----
+library(openxlsx)
+full_output = cbind(fData(gse),exprs(gse))
+write.xlsx(full_output, "countstable.xlsx")
+
+# ANALISE DE EXPRESSAO DIFERENCIAL ----
+#manipule os dados de acordo com a comparação que voce quer fazer
+#i.e., selecione linhas e colunas de seu interesse, mas tome cuidado :) 
+# agora vamos criar uma matriz de desing a partir das colunas do arquivo
+# aqui eu sugiro que independente da comparação que voce faça voce nao mexa nas colunas, no entanto choices!
+# ps: no exemplo eu nao vou mexer
+#   para entendimento: Se voce usa uma comparação controle com outra condiçao X que nao é a unica do estudo, 
+#     seus resultados podem ser um viés
+
+library(limma)
+design = model.matrix(~0+sampleInfo$group)
+View(design)
+## renomear os nomes das colunas
+colnames(design) = c("HAM_CD4M", "HAM_CD4p", "HAM_PBMC", "Control_CD4m", "Control_CD4p","Control_PMBC")
+p = summary(exprs(gse)) #exprs acessa valores de expressao e erro do objeto
+write.xlsx(p, "valores de expressão sem log2.xlsx")
+cutoff = median(exprs(gse)) ## calcular a medina de expressao
+
+#função é usada para ajustar o modelo aos dados
+#O resultado disso é estimar o nível de expressão em cada um dos grupos que especificamos
+fit = lmFit(exprs(gse), design) #criar um modelo linear para a analise
+head(fit$coefficients)
+
+#Para realizar a análise diferencial , temos que definir o contraste que nos interessa
+condition = makeContrasts(HAM_PBMC - Control_PMBC, levels = design)
+levels(design)
+fit = contrasts.fit(fit, condition)
+
+#Finalmente, aplique o passo de Bayes empírico para obter nossas estatísticas de expressão diferencial e valores-p.
+fit = eBayes(fit)
+topTable(fit)
+topTable(fit, coef=1)
+data <- topTable(fit, coef = 1, number = nrow(gse))
+library(openxlsx)
+write.xlsx(data, "express data HAMPBMC.xlsx", row.names = T)
