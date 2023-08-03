@@ -1,0 +1,71 @@
+#Análise de expressão diferencial por meio do DESEQ2
+#Carregar bibliotecas
+library(openxlsx)
+library(org.Hs.eg.db)
+library(DESeq2)
+
+outDir <- "atl career"
+dir.create(outDir)
+
+#Importar dado
+data = openxlsx::read.xlsx("Samples atl career.xlsx", colNames = T, rowNames = T)
+
+#Definir quais são os grupos, na mesma ordem das colunas do seu dataset. 
+#Exemplo, para o código abaixo havia 9 colunas de monócito e 5 macrófagos FOLR2+
+#Levels importa para definir qual será UP (positivo na expressão diferencial)
+condition <- factor(c(rep("career",12), rep("normal",3)), levels = c("career", "normal"))
+#UP is MACRO, DOWN is MONO
+
+sampleTable <- data.frame(condition = as.factor(condition))
+rownames(sampleTable) <- colnames(data)
+deseq <- DESeqDataSetFromMatrix(countData = data,
+                                colData = sampleTable,
+                                design = ~condition)
+d.deseq <-DESeq(deseq)
+#res_deseq <- lfcShrink(d.deseq, coef= 2, type="apeglm")
+res_deseq <- results(d.deseq)
+
+openxlsx::write.xlsx(as.data.frame(res_deseq), file.path(outDir, "DEGS atl career.xlsx"), rowNames=TRUE)
+
+resOrdered <- res_deseq[order(res_deseq$padj),]
+resSig <- subset(resOrdered, padj < 0.05)
+resl2fc <- resSig[order(resSig$log2FoldChange),] #120
+
+#1/(2**max(resl2fc[which(resl2fc$log2FoldChange < 0),2])) #smaller change among the sig for the reference
+#2**min(resl2fc[which(resl2fc$log2FoldChange > 0),2]) #smaller change among the sig for the interest
+
+
+resl2fc_up <- subset(resl2fc, log2FoldChange > 1) #mudar pra 1.5 sem log -> 0.5849625
+resl2fc_down <- subset(resl2fc, log2FoldChange < 1) #mudar pra 1.5 sem log -> 0.5849625
+openxlsx::write.xlsx(as.data.frame(resl2fc) , file.path(outDir, "significant_ATL_career.xlsx"), rowNames = T)
+openxlsx::write.xlsx(as.data.frame(resl2fc_up), file.path(outDir, "transcripts_up_career.xlsx"), rowNames=TRUE)
+openxlsx::write.xlsx(as.data.frame(resl2fc_down), file.path(outDir, "transcripts_down_career.xlsx"), rowNames=TRUE)
+
+
+#up
+table=read.xlsx(file.path(outDir, "transcripts_up.xlsx"), rowNames = T)
+table = as.data.frame(resl2fc_up) #de 860 foi pra 757 
+
+transcript_ids <- rownames(table)
+
+#Alternativa ao biomart mas que retorna a mesma proporção
+#columns(org.Hs.ed.db)
+table$entrez <- mapIds(org.Hs.eg.db, 
+                       keys = rownames(table), 
+                       keytype = "SYMBOL",
+                       column = "ENTREZID")
+length(na.exclude(table$entrez))
+openxlsx::write.xlsx(as.data.frame(table$entrez),file.path(outDir, "entrez_up.xlsx"))
+
+#down
+table <- openxlsx::read.xlsx(file.path(outDir,"transcripts_down.xlsx"), rowNames = T)
+table = as.data.frame(resl2fc_down) #de 704 for pra 581...
+
+transcript_ids <- rownames(table)
+
+table$entrez <- mapIds(org.Hs.eg.db, 
+                       keys = rownames(table), 
+                       keytype = "SYMBOL",
+                       column = "ENTREZID")
+length(na.exclude(table$entrez))
+openxlsx::write.xlsx(as.data.frame(table$entrez),file.path(outDir,"entrez_down.xlsx"))
