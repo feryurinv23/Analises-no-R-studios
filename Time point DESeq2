@@ -1,0 +1,59 @@
+Análise de expressão diferencial para estudo com time point por meio do DESeq2 
+library(DESeq2)
+library(ggplot2)
+setwd("~/Desktop/")
+data_initial = read.table("GSE197110 counts.txt", header = T, sep = '\t', row.names = 1)
+datacounts = round(data_initial)
+remove(data_initial)
+metadata = openxlsx::read.xlsx("metadata.xlsx")
+head(metadata)
+head(datacounts)
+
+duplicated(colnames(datacounts))
+duplicated(metadata$Sample.Name)
+
+dim(datacounts)
+dim(metadata)
+metadata$timer_phase
+metadata = metadata[order(metadata$Sample.Name, decreasing = F),]
+colnames(datacounts) == metadata$Sample.Name
+
+tbj = datacounts[,1:8]
+tbx = datacounts[,9:16]
+
+colnames(tbj) = metadata$timer_phase[1:8]
+colnames(tbx) = metadata$timer_phase[9:16]
+
+head(tbj)
+head(tbx)
+
+#### tbj DN vs blue
+dn_vs_blue_tbj = tbj[,c(1:2,5:6)]
+dn_vs_blue_tvx = tbx[,c(1:2,5:6)]
+dn_vs_blue_all = cbind(dn_vs_blue_tbj,dn_vs_blue_tvx)
+#####TNJ DN vs RED 
+dn_vsred_tbj = tbj[, c(1,4,5,8)]
+dn_vs_red_tbx = tbx[, c(1,4,5,8)]
+dn_vs_red_all = cbind(dn_vsred_tbj,dn_vs_red_tbx)
+#DN VS DP 
+dn_vsdp_tbj = tbj[,c(1,3,5,7)]
+dn_vs_dp_tbx = tbx[,c(1,3,5,7)]
+dn_vs_dp_all = cbind(dn_vsdp_tbj,dn_vs_dp_tbx)
+
+sampleTable = data.frame(condition = factor(c("DN", "Red", "DN", "Red", "DN", "Red", "DN", "Red")),
+                         clones = c(rep("TBJ", 4), rep("TBX", 4)))
+rownames(sampleTable) = make.names(colnames(dn_vs_red_all), unique = T)
+colnames(dn_vs_red_all) = make.names(colnames(dn_vs_red_all), unique = T)
+
+dds = DESeqDataSetFromMatrix(dn_vs_red_all, sampleTable, ~condition + clones)
+
+d.deseq = DESeq(dds)
+DGE.results = results(d.deseq,
+                      independentFiltering = TRUE,
+                      alpha = 0.05)
+
+table(DGE.results$log2FoldChange > 1, DGE.results$padj < 0.05)
+dim(DGE.results)
+dim(results)
+results = subset(DGE.results, padj < 0.05 | log2FoldChange > 1  |  log2FoldChange < -1)
+openxlsx::write.xlsx(data.frame(results), "GSE197110_dp_vs_dn.xlsx", rowNames = T)
